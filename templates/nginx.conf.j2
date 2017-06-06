@@ -1,0 +1,77 @@
+
+user  {{ nginx_user }} {{ nginx_group }};
+
+worker_processes  {{ nginx_worker_processes }};
+ 
+ 
+events {
+    worker_connections  1024;
+} 
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+     
+    sendfile        on;
+     
+    keepalive_timeout  65;
+     
+    #gzip  on;
+
+    server {
+        listen {{ nginx_for_redirect_to_https_port }};
+        rewrite ^ https://$host$request_uri permanent;
+    }
+ 
+    server {
+        root        {{ nginx_root }};
+        listen        80 default_server;
+        listen       [::]:80 default_server ipv6only=on;
+
+        client_max_body_size {{ nginx_max_upload_filesize }};
+
+        server_name  {{ nginx_server_name }};
+
+        index  index.php index.html index.htm;
+ 
+        #charset koi8-r;
+ 
+        access_log  {{ nginx_access_log }};
+        error_log   {{ nginx_error_log }};
+ 
+        location / {
+            try_files $uri $uri/ /index.php?$args;
+         }
+ 
+        error_page  404              /404.html;
+ 
+         # redirect server error pages to the static page /50x.html
+         #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+ 
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        location ~ \.php$ {
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_pass   unix:{{ phpFpm_socket_path }};
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+ 
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+    # include /etc/nginx/conf.d/*.conf;
+    # include /etc/nginx/sites-enabled/*;
+}
+

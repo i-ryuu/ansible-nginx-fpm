@@ -1,0 +1,44 @@
+---
+
+
+- name: Create document root directory
+  become: yes
+  file:
+    recurse: no
+    path: "{{ nginx_root }}"
+    owner: "{{ nginx_root_owner }}"
+    group: "{{ nginx_root_group }}"
+    state: directory
+    mode: "0775"
+
+- name: add apt repository
+  apt_repository:
+    repo: ppa:nginx/stable
+    state: present
+    update_cache: yes
+
+- name: install Nginx
+  apt:
+    name: nginx
+    state: latest
+
+- name: copy html files
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ nginx_root }}/{{ item }}"
+    mode: "0644"
+  with_items:
+    - "404.html"
+
+- name: delete default nginx conf file
+  file: path=/etc/nginx/sites-enabled/default state=absent
+
+- name: delete default nginx conf file2
+  file: path=/etc/nginx/sites-available/default state=absent
+
+- name: copy a nginx configuration file
+  template: 
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: "0644"
+  notify: restart nginx
